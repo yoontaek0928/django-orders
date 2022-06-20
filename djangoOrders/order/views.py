@@ -4,13 +4,16 @@ from order.serializers import ShopSerializer, MenuSerializer
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
+from django.utils import timezone
 
 @csrf_exempt
 def shop(request):
     if request.method == 'GET':
-        shop = Shop.objects.all()   # shop 데이터 베이스에 있는 모든 object는 모두 shop에 저장
-        serializer = ShopSerializer(shop, many=True)    # 그 데이터들은 모두 serializer를 통해 json 형태로 파싱
-        return JsonResponse(serializer.data, safe = False)
+        # shop = Shop.objects.all()   # shop 데이터 베이스에 있는 모든 object는 모두 shop에 저장
+        # serializer = ShopSerializer(shop, many=True)    # 그 데이터들은 모두 serializer를 통해 json 형태로 파싱
+        # return JsonResponse(serializer.data, safe = False)
+        shop = Shop.objects.all()
+        return render(request, 'order/shop_list.html',{'shop_list':shop})
     
     elif request.method == 'POST':
         data = JSONParser().parse(request)
@@ -21,11 +24,12 @@ def shop(request):
         return JsonResponse(serializer.errors, status=400)
 
 @csrf_exempt
-def menu(request):
+def menu(request, shop):
     if request.method == 'GET':
-        menu = Menu.objects.all()   # shop 데이터 베이스에 있는 모든 object는 모두 shop에 저장
-        serializer = MenuSerializer(menu, many=True)    # 그 데이터들은 모두 serializer를 통해 json 형태로 파싱
-        return JsonResponse(serializer.data, safe = False)
+        menu = Menu.objects.filter(shop=shop)   # shop에 해당하는 메뉴만 불러오기
+        # serializer = MenuSerializer(menu, many=True)    # 그 데이터들은 모두 serializer를 통해 json 형태로 파싱
+        # return JsonResponse(serializer.data, safe = False)
+        return render(request, 'order/menu_list.html', {'menu_list':menu, 'shop':shop})
     
     elif request.method == 'POST':
         data = JSONParser().parse(request)
@@ -34,4 +38,20 @@ def menu(request):
             serializer.save()
             return JsonResponse(serializer.data, status=201)
         return JsonResponse(serializer.errors, status=400)
-        
+
+@csrf_exempt
+def order(request):
+    if request.method == 'POST':
+        address = request.POST['address']
+        shop = request.POST['shop']
+        food_list = request.POST.getlist('menu')
+        order_date = timezone.now()
+        shop_item = Shop.objects.get(pk=int(shop))
+        shop_item.order_set.create(address=address,order_date=order_date,shop=int(shop))
+        order_item = Order.objects.get(pk=shop_item.order_set.latest('id').id)
+        for food in food_list:
+            order_item.orderfood_set.create(food_name=food)
+        return HttpResponse(status=200)
+    elif request.method == 'GET':
+        order_list = Order.objects.all()
+        return render(request, 'order/order_list.html', {'order_list':order_list})
