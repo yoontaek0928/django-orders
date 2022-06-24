@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'order',
     'boss',
-    'delivery'
+    'delivery',
+    'user'
 ]
 
 MIDDLEWARE = [
