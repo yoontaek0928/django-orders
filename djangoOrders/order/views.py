@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from order.models import Shop, Menu, Order, Orderfood
+from user.models import User
 from order.serializers import ShopSerializer, MenuSerializer
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -12,8 +13,11 @@ def shop(request):
         # shop = Shop.objects.all()   # shop 데이터 베이스에 있는 모든 object는 모두 shop에 저장
         # serializer = ShopSerializer(shop, many=True)    # 그 데이터들은 모두 serializer를 통해 json 형태로 파싱
         # return JsonResponse(serializer.data, safe = False)
-        shop = Shop.objects.all()
-        return render(request, 'order/shop_list.html',{'shop_list':shop})
+        if User.objects.all().get(id=request.session['user_id']).user_type == 0:
+            shop = Shop.objects.all()
+            return render(request, 'order/shop_list.html',{'shop_list':shop})
+        else:
+            return render(request, 'order/fail.html')
     
     elif request.method == 'POST':
         data = JSONParser().parse(request)
